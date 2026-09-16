@@ -1,1 +1,1 @@
-# tri3.ativ1
+# prog1.tri3.ativ1
