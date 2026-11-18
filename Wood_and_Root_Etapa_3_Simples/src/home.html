@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wood & Root - Produtos</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 25px; background: #f5f5f5; color: #222; }
+        .pagina { max-width: 1000px; margin: auto; }
+        header { display: flex; justify-content: space-between; flex-wrap: wrap; }
+        h1, h2, h3, h4 { color: #365b3b; }
+        main { margin-top: 25px; }
+        .filtros { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        input, select { padding: 9px; border: 1px solid #aaa; }
+        #produtos { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; }
+        .produto { background: white; border: 1px solid #ccc; padding: 12px; }
+        .produto img { width: 100%; height: 150px; object-fit: cover; }
+        .produto p { line-height: 1.4; }
+        button { padding: 9px 12px; background: #456b49; color: white; border: 0; cursor: pointer; }
+        .personalizacao { margin-top: 12px; padding: 10px; border: 1px solid #ccc; background: #fafafa; }
+        .personalizacao label { display: block; margin: 10px 0; }
+        .personalizacao input, .personalizacao select { display: block; width: 100%; margin-top: 5px; }
+        .resultado { display: block; margin: 10px 0; }
+        @media (max-width: 600px) { body { margin: 12px; } }
+    </style>
+</head>
+<body>
+    <div class="pagina">
+    <header>
+        <h1>Wood & Root</h1>
+        <p>Usuário: <strong id="usuario">carregando...</strong></p>
+    </header>
+
+    <main>
+    <h2>Catálogo de produtos</h2>
+    <div class="filtros">
+        <input id="pesquisa" type="search" placeholder="Pesquisar móvel...">
+        <select id="categoria">
+            <option value="">Todas as categorias</option>
+        </select>
+    </div>
+
+    <p id="mensagem">Carregando produtos...</p>
+    <section id="produtos"></section>
+    </main>
+    </div>
+
+    <script>
+        let listaProdutos = [];
+
+        async function carregarUsuario() {
+            const resposta = await fetch("/login/user");
+            if (!resposta.ok) {
+                window.location.href = "/";
+                return false;
+            }
+            const usuario = await resposta.json();
+            document.querySelector("#usuario").textContent = usuario.username;
+            return true;
+        }
+
+        async function carregarProdutos() {
+            const resposta = await fetch("/api/products");
+            if (!resposta.ok) {
+                document.querySelector("#mensagem").textContent = "Erro ao carregar os produtos.";
+                return;
+            }
+
+            listaProdutos = await resposta.json();
+
+            const categorias = [...new Set(listaProdutos.map(p => p.category))];
+            const seletor = document.querySelector("#categoria");
+
+            categorias.forEach(categoria => {
+                const opcao = document.createElement("option");
+                opcao.value = categoria;
+                opcao.textContent = categoria;
+                seletor.appendChild(opcao);
+            });
+
+            mostrarProdutos(listaProdutos);
+        }
+
+        function mostrarProdutos(produtos) {
+            const area = document.querySelector("#produtos");
+            const mensagem = document.querySelector("#mensagem");
+            area.innerHTML = "";
+
+            mensagem.textContent = produtos.length
+                ? produtos.length + " produto(s) encontrado(s)."
+                : "Nenhum produto encontrado.";
+
+            produtos.forEach(produto => {
+                const card = document.createElement("article");
+                card.className = "produto";
+
+                const imagem = document.createElement("img");
+                imagem.src = produto.image;
+                imagem.alt = produto.name;
+
+                const nome = document.createElement("h3");
+                nome.textContent = produto.name;
+
+                const descricao = document.createElement("p");
+                descricao.textContent = produto.description;
+
+                const categoria = document.createElement("p");
+                categoria.textContent = "Categoria: " + produto.category;
+
+                const preco = document.createElement("strong");
+                preco.textContent = Number(produto.price).toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL"
+                });
+
+                const botao = document.createElement("button");
+                botao.textContent = "Personalizar";
+                botao.type = "button";
+                botao.addEventListener("click", () => abrirPersonalizacao(produto, card));
+
+                card.append(imagem, nome, descricao, categoria, preco, botao);
+                area.appendChild(card);
+            });
+        }
+
+
+        function abrirPersonalizacao(produto, card) {
+            const formularioAnterior = card.querySelector(".personalizacao");
+            if (formularioAnterior) {
+                formularioAnterior.remove();
+                return;
+            }
+
+            const formulario = document.createElement("form");
+            formulario.className = "personalizacao";
+            formulario.innerHTML = `
+                <h4>Personalizar: ${produto.name}</h4>
+                <label>Tipo de madeira
+                    <select name="woodType" required>
+                        <option value="Pinus">Pinus (sem adicional)</option>
+                        <option value="Carvalho">Carvalho (+ R$ 200,00)</option>
+                        <option value="Imbuia">Imbuia (+ R$ 350,00)</option>
+                    </select>
+                </label>
+                <label>Cor
+                    <select name="color" required>
+                        <option value="Natural">Natural</option>
+                        <option value="Branco">Branco</option>
+                        <option value="Preto">Preto</option>
+                        <option value="Mogno">Mogno</option>
+                    </select>
+                </label>
+                <label>Design
+                    <select name="design" required>
+                        <option value="Simples">Simples (sem adicional)</option>
+                        <option value="Trabalhado">Trabalhado (+ R$ 150,00)</option>
+                    </select>
+                </label>
+                <label>Dimensões (largura x altura x profundidade)
+                    <input name="dimensions" type="text" placeholder="Ex.: 120 x 80 x 60 cm" required maxlength="100">
+                </label>
+                <strong class="resultado">Adicional: R$ 0,00</strong>
+                <button type="submit">Salvar personalização</button>
+                <p class="retorno" aria-live="polite"></p>
+            `;
+
+            const madeira = formulario.elements.namedItem("woodType");
+            const design = formulario.elements.namedItem("design");
+            const resultado = formulario.querySelector(".resultado");
+            function atualizarAdicional() {
+                const madeiraValor = { Pinus: 0, Carvalho: 200, Imbuia: 350 }[madeira.value];
+                const designValor = { Simples: 0, Trabalhado: 150 }[design.value];
+                resultado.textContent = "Adicional: " + (madeiraValor + designValor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+            }
+            madeira.addEventListener("change", atualizarAdicional);
+            design.addEventListener("change", atualizarAdicional);
+
+            formulario.addEventListener("submit", async (event) => {
+                event.preventDefault();
+                const dados = new FormData(formulario);
+                const resposta = await fetch("/api/personalizations", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        productId: produto.id,
+                        woodType: dados.get("woodType"),
+                        color: dados.get("color"),
+                        design: dados.get("design"),
+                        dimensions: dados.get("dimensions")
+                    })
+                });
+                const retorno = await resposta.json();
+                const mensagem = formulario.querySelector(".retorno");
+                if (!resposta.ok) {
+                    mensagem.textContent = retorno.msg || "Não foi possível salvar.";
+                    return;
+                }
+                mensagem.textContent = retorno.msg + " Adicional: " + Number(retorno.additionalPrice).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) + ".";
+                formulario.querySelector('button[type="submit"]').disabled = true;
+            });
+
+            card.appendChild(formulario);
+        }
+
+        function filtrarProdutos() {
+            const termo = document.querySelector("#pesquisa").value.toLowerCase();
+            const categoria = document.querySelector("#categoria").value;
+
+            const filtrados = listaProdutos.filter(produto => {
+                const combinaNome = produto.name.toLowerCase().includes(termo);
+                const combinaCategoria = !categoria || produto.category === categoria;
+                return combinaNome && combinaCategoria;
+            });
+
+            mostrarProdutos(filtrados);
+        }
+
+        document.querySelector("#pesquisa").addEventListener("input", filtrarProdutos);
+        document.querySelector("#categoria").addEventListener("change", filtrarProdutos);
+
+        async function iniciar() {
+            const usuarioLogado = await carregarUsuario();
+            if (usuarioLogado) await carregarProdutos();
+        }
+
+        iniciar();
+    </script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wood & Root - Acesso</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 30px; background: #f5f5f5; color: #222; }
+        main { max-width: 700px; margin: auto; }
+        h1, h2 { color: #365b3b; }
+        .marca { text-align: center; }
+        .paineis { display: flex; gap: 20px; flex-wrap: wrap; }
+        .painel { background: white; border: 1px solid #ccc; padding: 18px; flex: 1; min-width: 250px; }
+        form { display: flex; flex-direction: column; gap: 10px; }
+        input { padding: 9px; border: 1px solid #aaa; }
+        button { padding: 9px; background: #456b49; color: white; border: 0; cursor: pointer; }
+        @media (max-width: 600px) { body { margin: 15px; } }
+    </style>
+</head>
+
+<body>
+    <main class="pagina">
+        <header class="marca">
+            <h1>Wood & Root</h1>
+            <p>Móveis com personalidade, feitos para o seu espaço.</p>
+        </header>
+        <div class="paineis">
+            <section class="painel">
+                <h2>Entrar</h2>
+                <form id="frmLogin">
+                    <input type="text" name="username" placeholder="E-mail de login" aria-label="E-mail de login" required>
+                    <input type="password" name="password" placeholder="Senha" aria-label="Senha" required>
+                    <button type="submit">Entrar</button>
+                </form>
+            </section>
+            <section class="painel">
+                <h2>Criar conta</h2>
+                <form id="frmCadastro">
+                    <input type="text" name="username" placeholder="E-mail de login" aria-label="E-mail de login" required>
+                    <input type="password" name="password" placeholder="Crie uma senha" aria-label="Crie uma senha" required>
+                    <button type="submit">Cadastrar</button>
+                </form>
+            </section>
+        </div>
+    </main>
+
+    <script>
+        const frmLogin = document.querySelector('#frmLogin')
+        const frmCadastro = document.querySelector('#frmCadastro')
+
+        frmLogin.addEventListener('submit', async (ev) => {
+            ev.preventDefault()
+            const response = await fetch("/login", {
+                method: "POST",
+                headers: { "Content-type": "application/json" },
+                body: JSON.stringify({
+                    "username": frmLogin.username.value,
+                    "password": frmLogin.password.value
+                })
+            })
+
+            if (response.status == 404)
+                return alert("Usuário não encontrado")
+
+            if (response.status == 401)
+                return alert("Senha incorreta")
+
+            if (response.ok) {
+                window.location.href = "/home"
+                return
+            }
+
+            alert("Não deveria chegar aqui")
+        })
+
+        frmCadastro.addEventListener('submit', async (ev) => {
+            ev.preventDefault()
+            const response = await fetch("/user", {
+                method: "POST",
+                headers: { "Content-type": "application/json" },
+                body: JSON.stringify({
+                    "username": frmCadastro.username.value,
+                    "password": frmCadastro.password.value
+                })
+            })
+            if (response.ok) {
+                alert("Usuário cadastrado com sucesso!")
+                frmCadastro.reset()
+                return
+            }
+
+            const data = await response.json()
+            alert(data.msg || "Erro ao cadastrar usuário")
+        })
+    </script>
+</body>
+
+</html>
